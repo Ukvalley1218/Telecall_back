@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(mongod:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(bash:*)",
+      "Bash(cd D:/bestkitchennet/HRMS_module/backend && npm run dev)",
+      "Read(//d/bestkitchennet/HRMS_module/frontend/**)",
+      "Bash(npm run:*)",
+      "Bash(netstat -ano | findstr :5000)",
+      "Bash(taskkill //PID 14576 //F)"
+    ]
+  }
+}
