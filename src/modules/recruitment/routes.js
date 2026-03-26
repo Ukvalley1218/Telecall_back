@@ -95,6 +95,24 @@ router.get('/:id',
   recruitmentController.getCandidate
 );
 
+// Update candidate details
+router.put('/:id',
+  [
+    param('id').isMongoId().withMessage('Invalid candidate ID'),
+    body('name').optional().notEmpty().withMessage('Name cannot be empty').trim(),
+    body('email').optional().isEmail().withMessage('Valid email is required').normalizeEmail(),
+    body('phone').optional().notEmpty().withMessage('Phone cannot be empty').trim(),
+    body('position').optional().notEmpty().withMessage('Position cannot be empty').trim(),
+    body('department').optional().trim(),
+    body('experience').optional().isFloat({ min: 0 }).withMessage('Experience must be non-negative'),
+    body('expectedSalary').optional().isFloat({ min: 0 }).withMessage('Expected salary must be non-negative'),
+    body('source').optional().isIn(['website', 'referral', 'job_portal', 'walk_in', 'other']),
+    body('notes').optional().trim()
+  ],
+  validate,
+  recruitmentController.updateCandidate
+);
+
 // Update candidate status - Shortlist
 router.put('/:id/shortlist',
   [param('id').isMongoId().withMessage('Invalid candidate ID')],
@@ -180,6 +198,16 @@ router.put('/:id/reject',
   ],
   validate,
   recruitmentController.rejectCandidate
+);
+
+// Update candidate status (for drag-and-drop in kanban)
+router.put('/:id/status',
+  [
+    param('id').isMongoId().withMessage('Invalid candidate ID'),
+    body('status').isIn(['applied', 'shortlisted', 'screening', 'interview_scheduled', 'selected', 'training', 'offer_sent', 'rejected']).withMessage('Valid status is required')
+  ],
+  validate,
+  recruitmentController.updateStatus
 );
 
 // Get offer letter for candidate

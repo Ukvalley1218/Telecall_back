@@ -1,5 +1,5 @@
 import sandwichLeaveService from './service.js';
-import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse, paginatedResponse } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
 
 class SandwichLeaveController {
@@ -20,12 +20,14 @@ class SandwichLeaveController {
 
       const result = await sandwichLeaveService.getSandwichLeaves(organizationId, filters, options);
 
-      return successResponse(res, result.leaves, 'Sandwich leaves retrieved')
-        .json({
-          success: true,
-          data: result.leaves,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.leaves,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'Sandwich leaves retrieved'
+      );
     } catch (error) {
       logger.error('Get sandwich leaves error:', error);
       next(error);

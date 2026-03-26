@@ -1,5 +1,5 @@
 import attendanceService from './service.js';
-import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse, paginatedResponse } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
 import { ROLES } from '../../config/constants.js';
 
@@ -79,12 +79,14 @@ class AttendanceController {
 
       const result = await attendanceService.getAttendance(organizationId, filters, options);
 
-      return successResponse(res, result.attendance, 'Attendance records retrieved')
-        .json({
-          success: true,
-          data: result.attendance,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.attendance,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'Attendance records retrieved'
+      );
     } catch (error) {
       logger.error('Get attendance error:', error);
       next(error);
@@ -142,12 +144,14 @@ class AttendanceController {
 
       const result = await attendanceService.getLateMarkSummary(organizationId, filters, options);
 
-      return successResponse(res, result.summaries, 'Late mark summary retrieved')
-        .json({
-          success: true,
-          data: result.summaries,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.summaries,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'Late mark summary retrieved'
+      );
     } catch (error) {
       logger.error('Get late mark summary error:', error);
       next(error);
@@ -211,6 +215,24 @@ class AttendanceController {
       return createdResponse(res, attendance, 'Manual attendance entry recorded');
     } catch (error) {
       logger.error('Manual entry error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get attendance summary report by department
+   */
+  async getAttendanceSummaryReport(req, res, next) {
+    try {
+      const { organizationId } = req;
+      const month = req.query.month ? parseInt(req.query.month) : new Date().getMonth() + 1;
+      const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+
+      const report = await attendanceService.getAttendanceSummaryReport(organizationId, month, year);
+
+      return successResponse(res, report, 'Attendance summary report retrieved');
+    } catch (error) {
+      logger.error('Get attendance summary report error:', error);
       next(error);
     }
   }

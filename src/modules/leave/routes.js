@@ -49,7 +49,7 @@ router.get('/balances', [
  */
 router.get('/applications', [
   query('employeeId').optional().isMongoId(),
-  query('status').optional().isIn(['pending', 'approved', 'rejected', 'all']),
+  query('status').optional().isIn(['pending', 'hod_approved', 'approved', 'rejected', 'all']),
   query('department').optional().trim()
 ], validate, leaveController.getLeaveApplications);
 
@@ -69,12 +69,13 @@ router.post('/applications', [
 
 /**
  * @route   PUT /api/leave/applications/:id/approve
- * @desc    Approve leave application
- * @access  Private (Admin/HR)
+ * @desc    Approve leave application (HOD or HR approval)
+ * @access  Private (Admin/HR/HOD)
  */
 router.put('/applications/:id/approve', [
   param('id').notEmpty().withMessage('Leave application ID is required'),
-  body('notes').optional().trim()
+  body('notes').optional().trim(),
+  body('approvalType').optional().isIn(['hod', 'hr']).withMessage('Approval type must be hod or hr')
 ], validate, leaveController.approveLeave);
 
 /**

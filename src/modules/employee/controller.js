@@ -1,5 +1,5 @@
 import employeeService from './service.js';
-import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse, paginatedResponse } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
 
 class EmployeeController {
@@ -21,12 +21,14 @@ class EmployeeController {
 
       const result = await employeeService.getEmployees(organizationId, filters, options);
 
-      return successResponse(res, result.employees, 'Employees retrieved successfully')
-        .json({
-          success: true,
-          data: result.employees,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.employees,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'Employees retrieved successfully'
+      );
     } catch (error) {
       logger.error('Get employees error:', error);
       next(error);

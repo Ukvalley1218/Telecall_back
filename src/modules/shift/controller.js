@@ -1,5 +1,5 @@
 import shiftService from './service.js';
-import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse, paginatedResponse } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
 
 class ShiftController {
@@ -19,12 +19,14 @@ class ShiftController {
 
       const result = await shiftService.getShifts(organizationId, filters, options);
 
-      return successResponse(res, result.shifts, 'Shifts retrieved successfully')
-        .json({
-          success: true,
-          data: result.shifts,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.shifts,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'Shifts retrieved successfully'
+      );
     } catch (error) {
       logger.error('Get shifts error:', error);
       next(error);

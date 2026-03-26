@@ -1,5 +1,5 @@
 import recruitmentService from './service.js';
-import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse, paginatedResponse } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
 
 class RecruitmentController {
@@ -45,11 +45,14 @@ class RecruitmentController {
 
       const result = await recruitmentService.getCandidates(organizationId, filters, options);
 
-      return successResponse(res, result.candidates, 'Candidates retrieved successfully')
-        .json({
-          ...result.candidates,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.candidates,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'Candidates retrieved successfully'
+      );
     } catch (error) {
       logger.error('Get candidates error:', error);
       next(error);
@@ -71,6 +74,41 @@ class RecruitmentController {
       return successResponse(res, candidate, 'Candidate retrieved successfully');
     } catch (error) {
       logger.error('Get candidate error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update candidate details
+   */
+  async updateCandidate(req, res, next) {
+    try {
+      const { organizationId, user } = req;
+      const { id } = req.params;
+
+      // Build update object with only allowed fields
+      const allowedUpdates = ['name', 'email', 'phone', 'position', 'department', 'experience', 'expectedSalary', 'source', 'notes'];
+      const updates = {};
+
+      for (const field of allowedUpdates) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return errorResponse(res, 'No valid fields to update', 400);
+      }
+
+      const candidate = await recruitmentService.updateCandidate(id, organizationId, updates, user._id);
+
+      if (!candidate) {
+        return notFoundResponse(res, 'Candidate');
+      }
+
+      return successResponse(res, candidate, 'Candidate updated successfully');
+    } catch (error) {
+      logger.error('Update candidate error:', error);
       next(error);
     }
   }
@@ -300,6 +338,32 @@ class RecruitmentController {
       return successResponse(res, candidate, 'Candidate rejected');
     } catch (error) {
       logger.error('Reject candidate error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update candidate status (for drag-and-drop in kanban)
+   */
+  async updateStatus(req, res, next) {
+    try {
+      const { organizationId, user } = req;
+      const { status } = req.body;
+
+      const candidate = await recruitmentService.updateStatus(
+        req.params.id,
+        organizationId,
+        status,
+        user._id
+      );
+
+      if (!candidate) {
+        return notFoundResponse(res, 'Candidate');
+      }
+
+      return successResponse(res, candidate, 'Candidate status updated successfully');
+    } catch (error) {
+      logger.error('Update status error:', error);
       next(error);
     }
   }

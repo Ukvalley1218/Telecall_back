@@ -10,11 +10,53 @@ const router = express.Router();
 
 router.use(auth);
 
+// Get incentive dashboard stats
+router.get('/dashboard',
+  [
+    query('month').optional().isInt({ min: 1, max: 12 }).toInt(),
+    query('year').optional().isInt({ min: 2020, max: 2100 }).toInt(),
+    query('department').optional().trim()
+  ],
+  validate,
+  incentiveController.getDashboardStats
+);
+
+// Get incentive slabs
+router.get('/slabs',
+  incentiveController.getIncentiveSlabs
+);
+
+// Get pending approvals
+router.get('/pending-approvals',
+  isHR,
+  [
+    query('department').optional().trim(),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt()
+  ],
+  validate,
+  incentiveController.getPendingApprovals
+);
+
+// Get payment history
+router.get('/payment-history',
+  isHR,
+  [
+    query('month').optional().isInt({ min: 1, max: 12 }).toInt(),
+    query('year').optional().isInt({ min: 2020, max: 2100 }).toInt(),
+    query('department').optional().trim(),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt()
+  ],
+  validate,
+  incentiveController.getPaymentHistory
+);
+
 // Get all incentives (HR/Admin can see all, Employee can see own)
 router.get('/',
   [
     query('employeeId').optional().isMongoId(),
-    query('status').optional().isIn(['pending', 'paid', 'cancelled']),
+    query('status').optional().isIn(['pending', 'paid', 'cancelled', 'approved']),
     query('startDate').optional().isISO8601(),
     query('endDate').optional().isISO8601(),
     query('page').optional().isInt({ min: 1 }).toInt(),
@@ -33,6 +75,16 @@ router.get('/payable',
   ],
   validate,
   incentiveController.getPayableIncentives
+);
+
+// Approve incentive (HR/Admin)
+router.put('/approve/:employeeId',
+  isHR,
+  [
+    param('employeeId').isMongoId().withMessage('Invalid employee ID')
+  ],
+  validate,
+  incentiveController.approveIncentive
 );
 
 // Get incentive by ID

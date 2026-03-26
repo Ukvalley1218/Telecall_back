@@ -77,6 +77,14 @@ const employeeSchema = new mongoose.Schema({
       type: String,
       enum: ['male', 'female', 'other']
     },
+    maritalStatus: {
+      type: String,
+      enum: ['single', 'married', 'divorced', 'widowed'],
+      default: 'single'
+    },
+    anniversaryDate: {
+      type: Date
+    },
     address: addressSchema,
     emergencyContact: emergencyContactSchema
   },

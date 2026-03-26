@@ -6,27 +6,28 @@ const attendanceValidation = {
       .optional()
       .isMongoId().withMessage('Invalid employee ID'),
     body('shiftId')
-      .isMongoId().withMessage('Shift ID is required'),
-    body('location.lat')
       .optional()
+      .isMongoId().withMessage('Invalid shift ID format'),
+    body('location.lat')
+      .optional({ values: 'null' })
       .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
     body('location.lng')
-      .optional()
+      .optional({ values: 'null' })
       .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
     body('ip')
-      .optional()
+      .optional({ values: 'null' })
       .isIP().withMessage('Invalid IP address')
   ],
 
   checkOut: [
     body('location.lat')
-      .optional()
+      .optional({ values: 'null' })
       .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
     body('location.lng')
-      .optional()
+      .optional({ values: 'null' })
       .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
     body('ip')
-      .optional()
+      .optional({ values: 'null' })
       .isIP().withMessage('Invalid IP address')
   ],
 

@@ -13,10 +13,10 @@ router.use(auth);
 router.post('/checkin',
   [
     body('employeeId').optional().isMongoId().withMessage('Invalid employee ID'),
-    body('shiftId').isMongoId().withMessage('Shift ID is required'),
-    body('location.lat').optional().isFloat({ min: -90, max: 90 }),
-    body('location.lng').optional().isFloat({ min: -180, max: 180 }),
-    body('ip').optional().isIP()
+    body('shiftId').optional().isMongoId().withMessage('Invalid shift ID format'),
+    body('location.lat').optional({ values: 'null' }).isFloat({ min: -90, max: 90 }),
+    body('location.lng').optional({ values: 'null' }).isFloat({ min: -180, max: 180 }),
+    body('ip').optional({ values: 'null' }).isIP()
   ],
   validate,
   attendanceController.checkIn
@@ -25,9 +25,9 @@ router.post('/checkin',
 // Check-out
 router.post('/checkout',
   [
-    body('location.lat').optional().isFloat({ min: -90, max: 90 }),
-    body('location.lng').optional().isFloat({ min: -180, max: 180 }),
-    body('ip').optional().isIP()
+    body('location.lat').optional({ values: 'null' }).isFloat({ min: -90, max: 90 }),
+    body('location.lng').optional({ values: 'null' }).isFloat({ min: -180, max: 180 }),
+    body('ip').optional({ values: 'null' }).isIP()
   ],
   validate,
   attendanceController.checkOut
@@ -88,6 +88,16 @@ router.post('/late-mark-deduction',
 // Get today's attendance status
 router.get('/today',
   attendanceController.getTodayAttendance
+);
+
+// Get attendance summary report by department
+router.get('/summary-report',
+  [
+    query('month').optional().isInt({ min: 1, max: 12 }),
+    query('year').optional().isInt({ min: 2020 })
+  ],
+  validate,
+  attendanceController.getAttendanceSummaryReport
 );
 
 // Manual attendance entry (HR/Admin)

@@ -1,5 +1,5 @@
 import kpiService from './service.js';
-import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse, paginatedResponse } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
 
 class KPIController {
@@ -20,12 +20,14 @@ class KPIController {
 
       const result = await kpiService.getKPIs(organizationId, filters, options);
 
-      return successResponse(res, result.kpis, 'KPIs retrieved successfully')
-        .json({
-          success: true,
-          data: result.kpis,
-          pagination: result.pagination
-        });
+      return paginatedResponse(
+        res,
+        result.kpis,
+        options.page,
+        options.limit,
+        result.pagination.total,
+        'KPIs retrieved successfully'
+      );
     } catch (error) {
       logger.error('Get KPIs error:', error);
       next(error);

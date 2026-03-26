@@ -8,9 +8,13 @@ const router = express.Router();
 /**
  * @route   GET /api/dashboard/stats
  * @desc    Get dashboard statistics
+ * @query   department - Filter by department (optional)
  * @access  Private
  */
-router.get('/stats', dashboardController.getDashboardStats);
+router.get('/stats', [
+  query('department').optional().isString().withMessage('Department must be a string'),
+  validate
+], dashboardController.getDashboardStats);
 
 /**
  * @route   GET /api/dashboard/attendance-chart
@@ -35,5 +39,58 @@ router.get('/recruitment-funnel', dashboardController.getRecruitmentFunnel);
  * @access  Private
  */
 router.get('/department-distribution', dashboardController.getDepartmentDistribution);
+
+/**
+ * @route   GET /api/dashboard/upcoming-birthdays
+ * @desc    Get upcoming birthdays (next 30 days)
+ * @access  Private
+ */
+router.get('/upcoming-birthdays', dashboardController.getUpcomingBirthdays);
+
+/**
+ * @route   GET /api/dashboard/work-anniversaries
+ * @desc    Get work anniversaries (next 30 days)
+ * @access  Private
+ */
+router.get('/work-anniversaries', dashboardController.getWorkAnniversaries);
+
+/**
+ * @route   GET /api/dashboard/one-year-milestones
+ * @desc    Get employees completing 1 year this month
+ * @access  Private
+ */
+router.get('/one-year-milestones', dashboardController.getOneYearMilestones);
+
+/**
+ * @route   GET /api/dashboard/critical-alerts
+ * @desc    Get critical alerts (absent without leave, late arrivals)
+ * @query   department - Filter by department (optional)
+ * @access  Private
+ */
+router.get('/critical-alerts', [
+  query('department').optional().isString().withMessage('Department must be a string'),
+  validate
+], dashboardController.getCriticalAlerts);
+
+/**
+ * @route   GET /api/dashboard/today-attendance
+ * @desc    Get today's detailed attendance
+ * @access  Private
+ */
+router.get('/today-attendance', dashboardController.getTodayAttendanceDetails);
+
+/**
+ * @route   GET /api/dashboard/pending-approvals
+ * @desc    Get pending approvals count (leaves, expenses, etc.)
+ * @access  Private
+ */
+router.get('/pending-approvals', dashboardController.getPendingApprovals);
+
+/**
+ * @route   GET /api/dashboard/compliance-alerts
+ * @desc    Get compliance alerts summary
+ * @access  Private
+ */
+router.get('/compliance-alerts', dashboardController.getComplianceAlertsSummary);
 
 export default router;

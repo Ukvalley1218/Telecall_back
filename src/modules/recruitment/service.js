@@ -84,6 +84,26 @@ class RecruitmentService {
   }
 
   /**
+   * Update candidate details
+   */
+  async updateCandidate(id, organizationId, updates, updatedBy) {
+    const candidate = await Candidate.findOne({ _id: id, organizationId });
+
+    if (!candidate) {
+      return null;
+    }
+
+    // Remove organizationId from updates if present (shouldn't be changed)
+    const { organizationId: _, ...allowedUpdates } = updates;
+
+    // Apply updates
+    Object.assign(candidate, allowedUpdates, { updatedAt: new Date() });
+
+    await candidate.save();
+    return this.getCandidateById(id, organizationId);
+  }
+
+  /**
    * Get pipeline statistics
    */
   async getPipelineStatistics(organizationId) {

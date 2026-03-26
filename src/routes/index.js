@@ -57,4 +57,48 @@ router.use('/performance', performanceRoutes);
 import leaveRoutes from '../modules/leave/routes.js';
 router.use('/leave', leaveRoutes);
 
+// Payroll routes
+import payrollRoutes from '../modules/payroll/routes.js';
+router.use('/payroll', payrollRoutes);
+
+// Event routes
+import eventRoutes from '../modules/event/routes.js';
+router.use('/events', eventRoutes);
+
+// Training routes
+import trainingRoutes from '../modules/training/routes.js';
+router.use('/trainings', trainingRoutes);
+
+// Compliance routes
+import complianceRoutes from '../modules/compliance/routes.js';
+router.use('/compliance', complianceRoutes);
+
+// DWR routes
+import dwrRoutes from '../modules/dwr/routes.js';
+router.use('/dwr', dwrRoutes);
+
+// Holiday routes
+import holidayRoutes from '../modules/holiday/routes.js';
+router.use('/holidays', holidayRoutes);
+
+// Employee Self-Service routes (for logged-in employees)
+import employeeSelfServiceRoutes from '../modules/employeeSelfService/routes.js';
+router.use('/me', employeeSelfServiceRoutes);
+
+// Marketing routes
+import marketingRoutes from '../modules/marketing/routes.js';
+router.use('/marketing', marketingRoutes);
+
+// Sales routes
+import salesRoutes from '../modules/sales/routes.js';
+router.use('/sales', salesRoutes);
+
+// Interior Designer routes
+import interiorDesignerRoutes from '../modules/interiorDesigner/routes.js';
+router.use('/interior-designer', interiorDesignerRoutes);
+
+// Thank You Card routes
+import thankYouCardRoutes from '../modules/thankYouCard/routes.js';
+router.use('/thankyou', thankYouCardRoutes);
+
 export default router;

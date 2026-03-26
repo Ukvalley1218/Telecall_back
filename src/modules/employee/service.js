@@ -69,12 +69,10 @@ class EmployeeService {
    * Create employee
    */
   async createEmployee(data, createdBy) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    let userId = null;
 
-    try {
-      let userId = null;
-
+    // Helper function to create employee without transaction
+    const createEmployeeWithoutTransaction = async () => {
       // Create user account if requested
       if (data.createUserAccount) {
         const user = new User({
@@ -88,7 +86,7 @@ class EmployeeService {
             phone: data.personalInfo.phone
           }
         });
-        await user.save({ session });
+        await user.save();
         userId = user._id;
       }
 
@@ -120,16 +118,79 @@ class EmployeeService {
         salary: data.salary
       });
 
-      await employee.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
-
+      await employee.save();
       return await this.getEmployeeById(employee._id, data.organizationId);
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
+    };
+
+    // Try with transaction first, fall back to non-transaction if not supported
+    try {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        // Create user account if requested
+        if (data.createUserAccount) {
+          const user = new User({
+            organizationId: data.organizationId,
+            email: data.personalInfo.email,
+            password: data.password || 'password123', // Default password
+            role: 'employee',
+            profile: {
+              firstName: data.personalInfo.firstName,
+              lastName: data.personalInfo.lastName,
+              phone: data.personalInfo.phone
+            }
+          });
+          await user.save({ session });
+          userId = user._id;
+        }
+
+        // Create employee
+        const employee = new Employee({
+          organizationId: data.organizationId,
+          userId,
+          candidateId: data.candidateId,
+          personalInfo: {
+            firstName: data.personalInfo.firstName,
+            lastName: data.personalInfo.lastName,
+            email: data.personalInfo.email,
+            phone: data.personalInfo.phone,
+            dateOfBirth: data.personalInfo.dateOfBirth,
+            gender: data.personalInfo.gender,
+            address: data.personalInfo.address,
+            emergencyContact: data.personalInfo.emergencyContact
+          },
+          employment: {
+            department: data.employment.department,
+            designation: data.employment.designation,
+            joiningDate: data.employment.joiningDate,
+            employmentType: data.employment.employmentType || 'full-time',
+            probationPeriod: data.employment.probationPeriod || 6
+          },
+          shiftId: data.shiftId,
+          overtimeAllowed: data.overtimeAllowed || false,
+          status: 'active',
+          salary: data.salary
+        });
+
+        await employee.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return await this.getEmployeeById(employee._id, data.organizationId);
+      } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+      }
+    } catch (txError) {
+      // If transaction is not supported (standalone MongoDB), fall back to non-transaction mode
+      if (txError.message && txError.message.includes('Transaction numbers are only allowed')) {
+        console.log('Transactions not supported, using non-transaction mode');
+        return createEmployeeWithoutTransaction();
+      }
+      throw txError;
     }
   }
 

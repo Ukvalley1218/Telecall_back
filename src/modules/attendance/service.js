@@ -54,15 +54,21 @@ class AttendanceService {
       throw new Error('Already checked in for today');
     }
 
-    // Get shift
+    // Get shift - use provided shiftId or fall back to employee's assigned shift
+    const shiftIdToUse = data.shiftId || employee.shiftId;
+
+    if (!shiftIdToUse) {
+      throw new Error('No shift assigned. Please contact HR to assign a shift to your profile.');
+    }
+
     const shift = await Shift.findOne({
-      _id: data.shiftId || employee.shiftId,
+      _id: shiftIdToUse,
       organizationId,
       isActive: true
     });
 
     if (!shift) {
-      throw new Error('Shift not found or inactive');
+      throw new Error('Assigned shift not found or inactive. Please contact HR.');
     }
 
     // Create attendance record
@@ -306,26 +312,73 @@ class AttendanceService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get employee from user
-    const employee = await Employee.findOne({
-      organizationId,
-      userId: user._id
-    });
+    // Check if user is admin/HR (can see all employees' attendance)
+    const isAdmin = user.role === 'admin' || user.role === 'hr' || user.role === 'super_admin';
 
-    if (!employee) {
-      return null;
+    if (isAdmin) {
+      // Get all employees' attendance for today
+      const attendance = await Attendance.find({
+        organizationId,
+        date: today
+      })
+        .populate('employeeId', 'personalInfo.firstName personalInfo.lastName personalInfo.email employeeId employment.department employment.designation')
+        .populate('shiftId', 'name code')
+        .sort({ 'employeeId.personalInfo.firstName': 1 });
+
+      // Get all active employees to show absent ones
+      const allEmployees = await Employee.find({
+        organizationId,
+        status: 'active'
+      }).select('personalInfo.firstName personalInfo.lastName personalInfo.email employeeId employment.department employment.designation shiftId');
+
+      // Create a map of attendance by employeeId
+      const attendanceMap = new Map();
+      attendance.forEach(a => {
+        if (a.employeeId && a.employeeId._id) {
+          attendanceMap.set(a.employeeId._id.toString(), a);
+        }
+      });
+
+      // Build result with all employees
+      const result = allEmployees.map(emp => {
+        const att = attendanceMap.get(emp._id.toString());
+        return {
+          _id: att?._id,
+          employeeId: emp,
+          shiftId: att?.shiftId || emp.shiftId,
+          date: today,
+          checkIn: att?.checkIn || null,
+          checkOut: att?.checkOut || null,
+          status: att?.status || 'absent',
+          lateMark: att?.lateMark || null,
+          workingHours: att?.workingHours || null,
+          overtimeHours: att?.overtimeHours || null
+        };
+      });
+
+      return result;
+    } else {
+      // Regular employee - only see their own attendance
+      const employee = await Employee.findOne({
+        organizationId,
+        userId: user._id
+      });
+
+      if (!employee) {
+        return null;
+      }
+
+      const attendance = await Attendance.findOne({
+        employeeId: employee._id,
+        organizationId,
+        date: today
+      }).populate('shiftId', 'name code');
+
+      return {
+        employee,
+        attendance
+      };
     }
-
-    const attendance = await Attendance.findOne({
-      employeeId: employee._id,
-      organizationId,
-      date: today
-    }).populate('shiftId', 'name code');
-
-    return {
-      employee,
-      attendance
-    };
   }
 
   /**
@@ -413,6 +466,149 @@ class AttendanceService {
     );
 
     await summary.addLateMark(attendance.date, attendance.lateMark.lateMinutes, attendance._id);
+  }
+
+  /**
+   * Get attendance summary report by department for a month
+   */
+  async getAttendanceSummaryReport(organizationId, month, year) {
+    // Calculate date range for the month
+    const startDate = new Date(year, month - 1, 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(year, month, 0); // Last day of month
+    endDate.setHours(23, 59, 59, 999);
+
+    // Get all active employees grouped by department
+    const employees = await Employee.aggregate([
+      { $match: { organizationId: new mongoose.Types.ObjectId(organizationId), status: 'active' } },
+      {
+        $group: {
+          _id: '$employment.department',
+          employeeIds: { $push: '$_id' },
+          totalEmployees: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get attendance records for the month
+    const attendanceRecords = await Attendance.find({
+      organizationId,
+      date: { $gte: startDate, $lte: endDate }
+    }).populate('employeeId', 'employment.department');
+
+    // Calculate working days in the month (excluding weekends - can be customized)
+    const workingDays = this.getWorkingDaysInMonth(year, month);
+
+    // Build report by department
+    const departmentStats = {};
+
+    // Initialize departments
+    employees.forEach(dept => {
+      departmentStats[dept._id] = {
+        department: dept._id || 'Unassigned',
+        totalEmployees: dept.totalEmployees,
+        totalPresent: 0,
+        totalLate: 0,
+        totalAbsent: 0,
+        totalLeave: 0,
+        totalOvertimeHours: 0,
+        workingDays: workingDays
+      };
+    });
+
+    // Process attendance records
+    attendanceRecords.forEach(record => {
+      const dept = record.employeeId?.employment?.department || 'Unassigned';
+
+      if (!departmentStats[dept]) {
+        departmentStats[dept] = {
+          department: dept,
+          totalEmployees: 0,
+          totalPresent: 0,
+          totalLate: 0,
+          totalAbsent: 0,
+          totalLeave: 0,
+          totalOvertimeHours: 0,
+          workingDays: workingDays
+        };
+      }
+
+      if (record.status === ATTENDANCE_STATUS.PRESENT || record.status === ATTENDANCE_STATUS.HALF_DAY) {
+        departmentStats[dept].totalPresent += record.status === ATTENDANCE_STATUS.HALF_DAY ? 0.5 : 1;
+      } else if (record.status === ATTENDANCE_STATUS.ABSENT) {
+        departmentStats[dept].totalAbsent += 1;
+      } else if (record.status === ATTENDANCE_STATUS.LEAVE) {
+        departmentStats[dept].totalLeave += 1;
+      }
+
+      if (record.lateMark && record.lateMark.isLate) {
+        departmentStats[dept].totalLate += 1;
+      }
+
+      if (record.overtimeHours) {
+        departmentStats[dept].totalOvertimeHours += record.overtimeHours || 0;
+      }
+    });
+
+    // Convert to array and calculate totals
+    const report = Object.values(departmentStats).map(stat => {
+      const totalPossibleAttendance = stat.totalEmployees * workingDays;
+      const actualAttendance = stat.totalPresent;
+      const attendancePercentage = totalPossibleAttendance > 0
+        ? ((actualAttendance / totalPossibleAttendance) * 100).toFixed(1)
+        : 0;
+
+      return {
+        department: stat.department,
+        totalEmployees: stat.totalEmployees,
+        present: Math.round(stat.totalPresent),
+        late: stat.totalLate,
+        absent: Math.round(stat.totalAbsent),
+        onLeave: stat.totalLeave,
+        overtimeHours: Math.round(stat.totalOvertimeHours),
+        attendancePercentage: parseFloat(attendancePercentage)
+      };
+    });
+
+    // Calculate totals
+    const totals = {
+      totalEmployees: report.reduce((sum, r) => sum + r.totalEmployees, 0),
+      present: report.reduce((sum, r) => sum + r.present, 0),
+      late: report.reduce((sum, r) => sum + r.late, 0),
+      absent: report.reduce((sum, r) => sum + r.absent, 0),
+      onLeave: report.reduce((sum, r) => sum + r.onLeave, 0),
+      overtimeHours: report.reduce((sum, r) => sum + r.overtimeHours, 0),
+      attendancePercentage: report.length > 0
+        ? (report.reduce((sum, r) => sum + r.attendancePercentage, 0) / report.length).toFixed(1)
+        : 0
+    };
+
+    return {
+      month,
+      year,
+      workingDays,
+      departments: report,
+      totals
+    };
+  }
+
+  /**
+   * Get working days in a month (excluding weekends)
+   */
+  getWorkingDaysInMonth(year, month) {
+    let workingDays = 0;
+    const date = new Date(year, month - 1, 1);
+
+    while (date.getMonth() === month - 1) {
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Sunday, 6 = Saturday
+        workingDays++;
+      }
+      date.setDate(date.getDate() + 1);
+    }
+
+    return workingDays;
   }
 }
 
