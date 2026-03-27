@@ -101,4 +101,8 @@ router.use('/interior-designer', interiorDesignerRoutes);
 import thankYouCardRoutes from '../modules/thankYouCard/routes.js';
 router.use('/thankyou', thankYouCardRoutes);
 
+// Order Management routes
+import orderRoutes from '../modules/order/routes.js';
+router.use('/orders', orderRoutes);
+
 export default router;
