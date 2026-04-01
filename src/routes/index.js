@@ -105,4 +105,8 @@ router.use('/thankyou', thankYouCardRoutes);
 import orderRoutes from '../modules/order/routes.js';
 router.use('/orders', orderRoutes);
 
+// Production routes
+import productionRoutes from '../modules/production/routes.js';
+router.use('/production', productionRoutes);
+
 export default router;
