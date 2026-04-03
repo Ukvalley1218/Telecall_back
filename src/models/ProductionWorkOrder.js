@@ -250,6 +250,42 @@ const productionWorkOrderSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  // Installation Photos
+  photos: {
+    // Photo before dispatch from factory/workshop
+    beforeDispatch: {
+      url: String,
+      publicId: String, // For cloud storage
+      uploadedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      uploadedAt: Date,
+      remarks: String
+    },
+    // Photo at site before installation starts
+    beforeInstallation: {
+      url: String,
+      publicId: String,
+      uploadedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      uploadedAt: Date,
+      remarks: String
+    },
+    // Photo after installation is complete
+    afterInstallation: {
+      url: String,
+      publicId: String,
+      uploadedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      uploadedAt: Date,
+      remarks: String
+    }
+  },
   // Activity Log
   activityLog: [{
     action: String,

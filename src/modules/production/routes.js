@@ -532,4 +532,52 @@ router.get('/config/fm-stages',
   productionController.getFMStages
 );
 
+// ==================== PHOTO Routes ====================
+
+// Upload work order photo (HM)
+router.post('/work-orders/:id/photos/:photoType',
+  [
+    param('id').isMongoId().withMessage('Invalid work order ID'),
+    param('photoType').isIn(['beforeDispatch', 'beforeInstallation', 'afterInstallation']).withMessage('Invalid photo type'),
+    body('url').notEmpty().withMessage('Photo URL is required'),
+    body('publicId').optional().trim(),
+    body('remarks').optional().trim()
+  ],
+  validate,
+  productionController.uploadWorkOrderPhoto
+);
+
+// Delete work order photo (HM)
+router.delete('/work-orders/:id/photos/:photoType',
+  [
+    param('id').isMongoId().withMessage('Invalid work order ID'),
+    param('photoType').isIn(['beforeDispatch', 'beforeInstallation', 'afterInstallation']).withMessage('Invalid photo type')
+  ],
+  validate,
+  productionController.deleteWorkOrderPhoto
+);
+
+// Upload batch order photo (FM)
+router.post('/batch-orders/:id/photos/:photoType',
+  [
+    param('id').isMongoId().withMessage('Invalid batch order ID'),
+    param('photoType').isIn(['beforeDispatch', 'beforeInstallation', 'afterInstallation']).withMessage('Invalid photo type'),
+    body('url').notEmpty().withMessage('Photo URL is required'),
+    body('publicId').optional().trim(),
+    body('remarks').optional().trim()
+  ],
+  validate,
+  productionController.uploadBatchOrderPhoto
+);
+
+// Delete batch order photo (FM)
+router.delete('/batch-orders/:id/photos/:photoType',
+  [
+    param('id').isMongoId().withMessage('Invalid batch order ID'),
+    param('photoType').isIn(['beforeDispatch', 'beforeInstallation', 'afterInstallation']).withMessage('Invalid photo type')
+  ],
+  validate,
+  productionController.deleteBatchOrderPhoto
+);
+
 export default router;

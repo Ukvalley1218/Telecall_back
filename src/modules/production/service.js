@@ -729,6 +729,166 @@ class ProductionService {
     return this.constructor.FM_STAGES;
   }
 
+  // ==================== PHOTOS ====================
+
+  /**
+   * Upload photo to work order
+   * @param {string} id - Work order ID
+   * @param {string} organizationId - Organization ID
+   * @param {string} photoType - 'beforeDispatch', 'beforeInstallation', or 'afterInstallation'
+   * @param {object} photoData - { url, publicId, remarks }
+   * @param {string} userId - User ID who uploaded
+   */
+  async uploadWorkOrderPhoto(id, organizationId, photoType, photoData, userId) {
+    const order = await ProductionWorkOrder.findOne({ _id: id, organizationId });
+    if (!order) return null;
+
+    // Validate photo type
+    if (!['beforeDispatch', 'beforeInstallation', 'afterInstallation'].includes(photoType)) {
+      throw new Error('Invalid photo type. Must be beforeDispatch, beforeInstallation, or afterInstallation');
+    }
+
+    // Initialize photos object if not exists
+    if (!order.photos) {
+      order.photos = {
+        beforeDispatch: null,
+        beforeInstallation: null,
+        afterInstallation: null
+      };
+    }
+
+    // Set photo data
+    order.photos[photoType] = {
+      url: photoData.url,
+      publicId: photoData.publicId,
+      uploadedBy: userId,
+      uploadedAt: new Date(),
+      remarks: photoData.remarks || ''
+    };
+
+    // Add activity log
+    const photoTypeLabels = {
+      beforeDispatch: 'Before Dispatch',
+      beforeInstallation: 'Before Installation',
+      afterInstallation: 'After Installation'
+    };
+    order.activityLog.push({
+      action: 'photo_upload',
+      details: `${photoTypeLabels[photoType]} photo uploaded`,
+      performedBy: userId
+    });
+
+    order.updatedBy = userId;
+    order.updatedAt = new Date();
+
+    return await order.save();
+  }
+
+  /**
+   * Delete photo from work order
+   * @param {string} id - Work order ID
+   * @param {string} organizationId - Organization ID
+   * @param {string} photoType - 'beforeDispatch', 'beforeInstallation', or 'afterInstallation'
+   * @param {string} userId - User ID who deleted
+   */
+  async deleteWorkOrderPhoto(id, organizationId, photoType, userId) {
+    const order = await ProductionWorkOrder.findOne({ _id: id, organizationId });
+    if (!order) return null;
+
+    // Validate photo type
+    if (!['beforeDispatch', 'beforeInstallation', 'afterInstallation'].includes(photoType)) {
+      throw new Error('Invalid photo type');
+    }
+
+    // Clear photo data
+    if (order.photos) {
+      order.photos[photoType] = null;
+    }
+
+    // Add activity log
+    const photoTypeLabels = {
+      beforeDispatch: 'Before Dispatch',
+      beforeInstallation: 'Before Installation',
+      afterInstallation: 'After Installation'
+    };
+    order.activityLog.push({
+      action: 'photo_delete',
+      details: `${photoTypeLabels[photoType]} photo deleted`,
+      performedBy: userId
+    });
+
+    order.updatedBy = userId;
+    order.updatedAt = new Date();
+
+    return await order.save();
+  }
+
+  /**
+   * Upload photo to batch order (FM)
+   */
+  async uploadBatchOrderPhoto(id, organizationId, photoType, photoData, userId) {
+    const order = await ProductionBatchOrder.findOne({ _id: id, organizationId });
+    if (!order) return null;
+
+    if (!['beforeDispatch', 'beforeInstallation', 'afterInstallation'].includes(photoType)) {
+      throw new Error('Invalid photo type');
+    }
+
+    if (!order.photos) {
+      order.photos = {
+        beforeDispatch: null,
+        beforeInstallation: null,
+        afterInstallation: null
+      };
+    }
+
+    order.photos[photoType] = {
+      url: photoData.url,
+      publicId: photoData.publicId,
+      uploadedBy: userId,
+      uploadedAt: new Date(),
+      remarks: photoData.remarks || ''
+    };
+
+    order.activityLog = order.activityLog || [];
+    order.activityLog.push({
+      action: 'photo_upload',
+      details: `${photoType} photo uploaded`,
+      performedBy: userId,
+      performedAt: new Date()
+    });
+
+    order.updatedBy = userId;
+    order.updatedAt = new Date();
+
+    return await order.save();
+  }
+
+  /**
+   * Delete photo from batch order
+   */
+  async deleteBatchOrderPhoto(id, organizationId, photoType, userId) {
+    const order = await ProductionBatchOrder.findOne({ _id: id, organizationId });
+    if (!order) return null;
+
+    if (order.photos) {
+      order.photos[photoType] = null;
+    }
+
+    order.activityLog = order.activityLog || [];
+    order.activityLog.push({
+      action: 'photo_delete',
+      details: `${photoType} photo deleted`,
+      performedBy: userId,
+      performedAt: new Date()
+    });
+
+    order.updatedBy = userId;
+    order.updatedAt = new Date();
+
+    return await order.save();
+  }
+
   // ==================== HELPERS ====================
 
   _calculateAvgCompletionTime(orders) {

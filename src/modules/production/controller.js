@@ -892,6 +892,130 @@ class ProductionController {
     const stages = productionService.getFMStages();
     return successResponse(res, stages, 'FM stages retrieved successfully');
   }
+
+  // ==================== PHOTOS ====================
+
+  /**
+   * Upload work order photo
+   */
+  async uploadWorkOrderPhoto(req, res, next) {
+    try {
+      const { organizationId, user } = req;
+      const { id } = req.params;
+      const { photoType } = req.params;
+      const { url, publicId, remarks } = req.body;
+
+      if (!url) {
+        return errorResponse(res, 'Photo URL is required', 400);
+      }
+
+      const order = await productionService.uploadWorkOrderPhoto(
+        id,
+        organizationId,
+        photoType,
+        { url, publicId, remarks },
+        user._id
+      );
+
+      if (!order) {
+        return notFoundResponse(res, 'Work order');
+      }
+
+      logger.info(`Photo uploaded for work order ${id}, type: ${photoType} by user ${user._id}`);
+      return successResponse(res, order, 'Photo uploaded successfully');
+    } catch (error) {
+      logger.error('Upload work order photo error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Delete work order photo
+   */
+  async deleteWorkOrderPhoto(req, res, next) {
+    try {
+      const { organizationId, user } = req;
+      const { id, photoType } = req.params;
+
+      const order = await productionService.deleteWorkOrderPhoto(
+        id,
+        organizationId,
+        photoType,
+        user._id
+      );
+
+      if (!order) {
+        return notFoundResponse(res, 'Work order');
+      }
+
+      logger.info(`Photo deleted for work order ${id}, type: ${photoType} by user ${user._id}`);
+      return successResponse(res, order, 'Photo deleted successfully');
+    } catch (error) {
+      logger.error('Delete work order photo error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Upload batch order photo
+   */
+  async uploadBatchOrderPhoto(req, res, next) {
+    try {
+      const { organizationId, user } = req;
+      const { id } = req.params;
+      const { photoType } = req.params;
+      const { url, publicId, remarks } = req.body;
+
+      if (!url) {
+        return errorResponse(res, 'Photo URL is required', 400);
+      }
+
+      const order = await productionService.uploadBatchOrderPhoto(
+        id,
+        organizationId,
+        photoType,
+        { url, publicId, remarks },
+        user._id
+      );
+
+      if (!order) {
+        return notFoundResponse(res, 'Batch order');
+      }
+
+      logger.info(`Photo uploaded for batch order ${id}, type: ${photoType} by user ${user._id}`);
+      return successResponse(res, order, 'Photo uploaded successfully');
+    } catch (error) {
+      logger.error('Upload batch order photo error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Delete batch order photo
+   */
+  async deleteBatchOrderPhoto(req, res, next) {
+    try {
+      const { organizationId, user } = req;
+      const { id, photoType } = req.params;
+
+      const order = await productionService.deleteBatchOrderPhoto(
+        id,
+        organizationId,
+        photoType,
+        user._id
+      );
+
+      if (!order) {
+        return notFoundResponse(res, 'Batch order');
+      }
+
+      logger.info(`Photo deleted for batch order ${id}, type: ${photoType} by user ${user._id}`);
+      return successResponse(res, order, 'Photo deleted successfully');
+    } catch (error) {
+      logger.error('Delete batch order photo error:', error);
+      next(error);
+    }
+  }
 }
 
 export default new ProductionController();
