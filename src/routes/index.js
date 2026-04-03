@@ -109,4 +109,12 @@ router.use('/orders', orderRoutes);
 import productionRoutes from '../modules/production/routes.js';
 router.use('/production', productionRoutes);
 
+// Upload routes (for call recordings and file uploads)
+import uploadRoutes from '../modules/upload/routes.js';
+router.use('/upload', uploadRoutes);
+
+// Telecalling routes (campaigns, leads, call logs, tasks, follow-ups)
+import telecallingRoutes from '../modules/telecalling/routes.js';
+router.use('/telecalling', telecallingRoutes);
+
 export default router;

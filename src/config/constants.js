@@ -3,14 +3,16 @@ export const ROLES = {
   SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
   HR: 'hr',
+  TELECALLER: 'telecaller',
   EMPLOYEE: 'employee'
 };
 
 // Role hierarchy for permission checks
 export const ROLE_HIERARCHY = {
-  [ROLES.SUPER_ADMIN]: 4,
-  [ROLES.ADMIN]: 3,
-  [ROLES.HR]: 2,
+  [ROLES.SUPER_ADMIN]: 5,
+  [ROLES.ADMIN]: 4,
+  [ROLES.HR]: 3,
+  [ROLES.TELECALLER]: 2,
   [ROLES.EMPLOYEE]: 1
 };
 

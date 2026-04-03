@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import authController from './controller.js';
 import { validate } from '../../middleware/validate.js';
 import { auth } from '../../middleware/auth.js';
+import { isHR } from '../../middleware/rbac.js';
 
 const router = express.Router();
 
@@ -90,6 +91,66 @@ router.put('/password',
   ],
   validate,
   authController.changePassword
+);
+
+// Forgot password (public)
+router.post('/forgot-password',
+  [
+    body('email')
+      .isEmail().withMessage('Valid email is required')
+      .normalizeEmail()
+  ],
+  validate,
+  authController.forgotPassword
+);
+
+// Reset password (public)
+router.post('/reset-password',
+  [
+    body('token')
+      .notEmpty().withMessage('Reset token is required'),
+    body('newPassword')
+      .isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
+  ],
+  validate,
+  authController.resetPassword
+);
+
+// Verify reset token (public)
+router.get('/verify-reset-token/:token',
+  authController.verifyResetToken
+);
+
+// Create telecaller (protected - admin/HR)
+router.post('/telecallers',
+  auth,
+  isHR,
+  [
+    body('email')
+      .isEmail().withMessage('Valid email is required')
+      .normalizeEmail(),
+    body('firstName')
+      .notEmpty().withMessage('First name is required')
+      .trim(),
+    body('lastName')
+      .notEmpty().withMessage('Last name is required')
+      .trim(),
+    body('phone')
+      .optional()
+      .trim(),
+    body('password')
+      .optional()
+      .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+  ],
+  validate,
+  authController.createTelecaller
+);
+
+// Get telecallers (protected - admin/HR)
+router.get('/telecallers',
+  auth,
+  isHR,
+  authController.getTelecallers
 );
 
 export default router;
