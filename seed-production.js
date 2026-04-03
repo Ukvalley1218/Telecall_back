@@ -901,7 +901,7 @@ async function seedProduction() {
     console.log(`Database: ${mongoose.connection.name}`);
 
     // Use the specific organization ID from the logged-in user
-    const ORGANIZATION_ID = '69c3d17d4e7b754c759d2fa1';
+    const ORGANIZATION_ID = '69ce659461390b679fd80ecc';
 
     // Find the organization
     const organization = await Organization.findById(ORGANIZATION_ID);
