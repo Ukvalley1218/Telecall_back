@@ -36,12 +36,15 @@ router.post('/register',
   authController.register
 );
 
-// Login
+// Login - supports email or phone as identifier
 router.post('/login',
   [
+    body('identifier')
+      .optional()
+      .notEmpty().withMessage('Identifier is required'),
     body('email')
-      .isEmail().withMessage('Valid email is required')
-      .normalizeEmail(),
+      .optional()
+      .notEmpty().withMessage('Email is required'),
     body('password')
       .notEmpty().withMessage('Password is required')
   ],

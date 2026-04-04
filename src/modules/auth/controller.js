@@ -33,15 +33,19 @@ class AuthController {
    */
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { email, identifier, password } = req.body;
 
-      const result = await authService.login(email, password);
+      // Support both 'email' and 'identifier' fields
+      // identifier can be email or phone
+      const loginIdentifier = identifier || email;
+
+      const result = await authService.login(loginIdentifier, password);
 
       if (!result.success) {
         return errorResponse(res, result.message, 401);
       }
 
-      logger.info(`User logged in: ${email}`);
+      logger.info(`User logged in: ${loginIdentifier}`);
 
       return successResponse(res, {
         user: sanitizeUser(result.user),

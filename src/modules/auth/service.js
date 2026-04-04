@@ -61,11 +61,16 @@ class AuthService {
   }
 
   /**
-   * Login user
+   * Login user - supports email or phone
    */
-  async login(email, password) {
-    // Find user with password
-    const user = await User.findOne({ email }).select('+password').populate('organizationId');
+  async login(identifier, password) {
+    // Find user by email or phone
+    const user = await User.findOne({
+      $or: [
+        { email: identifier.toLowerCase() },
+        { 'profile.phone': identifier }
+      ]
+    }).select('+password').populate('organizationId');
 
     if (!user) {
       return { success: false, message: 'Invalid credentials' };
