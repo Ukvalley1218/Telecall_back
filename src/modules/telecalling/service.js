@@ -800,34 +800,101 @@ class TelecallingService {
   async getDailyReport(organizationId, userId, date) {
     try {
       const reportDate = date ? new Date(date) : new Date();
+      reportDate.setHours(0, 0, 0, 0);
 
-      const [callStats, callTimeline, tasksCompleted, followUpsCompleted] = await Promise.all([
-        this.getCallStatistics(organizationId, userId, reportDate, reportDate),
+      // Create proper start and end of day for date range queries
+      const startOfDay = new Date(reportDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(reportDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const [callStats, callTimeline, tasksCompleted, followUpsCompleted, attendanceSession] = await Promise.all([
+        this.getCallStatistics(organizationId, userId, startOfDay, endOfDay),
         this.getCallTimeline(organizationId, userId, reportDate),
         TelecallerTask.find({
+          organizationId,
           assignedTo: userId,
+          status: 'completed',
           completedAt: {
-            $gte: new Date(reportDate.setHours(0, 0, 0, 0)),
-            $lte: new Date(reportDate.setHours(23, 59, 59, 999))
+            $gte: startOfDay,
+            $lte: endOfDay
           }
         }).countDocuments(),
         FollowUp.find({
+          organizationId,
           assignedTo: userId,
+          status: 'completed',
           completedAt: {
-            $gte: new Date(reportDate.setHours(0, 0, 0, 0)),
-            $lte: new Date(reportDate.setHours(23, 59, 59, 999))
+            $gte: startOfDay,
+            $lte: endOfDay
           }
-        }).countDocuments()
+        }).countDocuments(),
+        // Get attendance session for the day
+        TelecallerSession.findOne({
+          organizationId,
+          userId,
+          date: reportDate
+        }).populate('userId', 'profile.firstName profile.lastName email role')
       ]);
+
+      // Build activities array from attendance and calls
+      const activities = [];
+
+      // Add login activity
+      if (attendanceSession?.checkIn?.time) {
+        activities.push({
+          time: new Date(attendanceSession.checkIn.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          action: 'Login',
+          description: 'Started work',
+          type: 'login'
+        });
+      }
+
+      // Add call activities (limit to recent ones)
+      if (callTimeline && callTimeline.length > 0) {
+        const recentCalls = callTimeline.slice(-5); // Last 5 calls
+        recentCalls.forEach(call => {
+          const callTime = new Date(call.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          activities.push({
+            time: callTime,
+            action: call.status === 'connected' ? 'Call Connected' : 'Call Made',
+            description: call.leadId?.name || call.phoneNumber,
+            type: call.status === 'connected' ? 'resume' : 'break'
+          });
+        });
+      }
+
+      // Add logout activity
+      if (attendanceSession?.checkOut?.time) {
+        activities.push({
+          time: new Date(attendanceSession.checkOut.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          action: 'Logout',
+          description: 'Ended work',
+          type: 'logout'
+        });
+      }
+
+      // Sort activities by time
+      activities.sort((a, b) => {
+        const timeA = a.time.split(':').map(Number);
+        const timeB = b.time.split(':').map(Number);
+        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+      });
 
       return {
         success: true,
         report: {
           date: reportDate,
+          loginTime: attendanceSession?.checkIn?.time ? new Date(attendanceSession.checkIn.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
+          logoutTime: attendanceSession?.checkOut?.time ? new Date(attendanceSession.checkOut.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
+          workingHours: attendanceSession?.workingHours || 0,
+          totalBreaks: 0, // Not implemented yet
           calls: callStats.stats,
           timeline: callTimeline.timeline,
           tasksCompleted,
-          followUpsCompleted
+          followUpsCompleted,
+          activities
         }
       };
     } catch (error) {
