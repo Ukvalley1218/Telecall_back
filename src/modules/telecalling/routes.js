@@ -508,4 +508,43 @@ router.get('/reports/daily',
   telecallingController.getDailyReport
 );
 
+// ==================== ATTENDANCE ROUTES ====================
+
+/**
+ * @route   POST /api/telecalling/attendance/checkin
+ * @desc    Check-in for telecaller
+ * @access  Private
+ */
+router.post('/attendance/checkin',
+  [
+    body('location.lat').optional().isFloat({ min: -90, max: 90 }),
+    body('location.lng').optional().isFloat({ min: -180, max: 180 })
+  ],
+  validate,
+  telecallingController.telecallerCheckIn
+);
+
+/**
+ * @route   POST /api/telecalling/attendance/checkout
+ * @desc    Check-out for telecaller
+ * @access  Private
+ */
+router.post('/attendance/checkout',
+  [
+    body('location.lat').optional().isFloat({ min: -90, max: 90 }),
+    body('location.lng').optional().isFloat({ min: -180, max: 180 })
+  ],
+  validate,
+  telecallingController.telecallerCheckOut
+);
+
+/**
+ * @route   GET /api/telecalling/attendance/today
+ * @desc    Get today's attendance for telecaller
+ * @access  Private
+ */
+router.get('/attendance/today',
+  telecallingController.getTelecallerTodayAttendance
+);
+
 export default router;

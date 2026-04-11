@@ -895,7 +895,7 @@ const inventoryData = [
 
 async function seedProduction() {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://yuva99:yuvaninenine@yuva99.rzz98mq.mongodb.net/hrms_db';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://yuva99:yuvaninenine@yuva99.rzz98mq.mongodb.net/telecallback_db';
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
     console.log(`Database: ${mongoose.connection.name}`);

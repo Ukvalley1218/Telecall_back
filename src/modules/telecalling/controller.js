@@ -619,6 +619,77 @@ class TelecallingController {
       next(error);
     }
   }
+
+  // ==================== ATTENDANCE CONTROLLERS ====================
+
+  /**
+   * Telecaller check-in
+   */
+  async telecallerCheckIn(req, res, next) {
+    try {
+      const organizationId = req.organizationId;
+      const userId = req.user._id;
+      const { location } = req.body;
+
+      const result = await telecallingService.telecallerCheckIn(organizationId, userId, { location });
+
+      if (!result.success) {
+        return errorResponse(res, result.message, 400);
+      }
+
+      logger.info(`Telecaller check-in: User ${userId} at ${result.attendance.checkIn.time}`);
+
+      return createdResponse(res, result.attendance, 'Check-in recorded successfully');
+    } catch (error) {
+      logger.error('Telecaller check-in error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Telecaller check-out
+   */
+  async telecallerCheckOut(req, res, next) {
+    try {
+      const organizationId = req.organizationId;
+      const userId = req.user._id;
+      const { location } = req.body;
+
+      const result = await telecallingService.telecallerCheckOut(organizationId, userId, { location });
+
+      if (!result.success) {
+        return errorResponse(res, result.message, 400);
+      }
+
+      logger.info(`Telecaller check-out: User ${userId} at ${result.attendance.checkOut.time}`);
+
+      return successResponse(res, result.attendance, 'Check-out recorded successfully');
+    } catch (error) {
+      logger.error('Telecaller check-out error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get today's attendance for telecaller
+   */
+  async getTelecallerTodayAttendance(req, res, next) {
+    try {
+      const organizationId = req.organizationId;
+      const userId = req.user._id;
+
+      const result = await telecallingService.getTelecallerTodayAttendance(organizationId, userId);
+
+      if (!result.success) {
+        return errorResponse(res, result.message, 400);
+      }
+
+      return successResponse(res, result.attendance, 'Today attendance retrieved successfully');
+    } catch (error) {
+      logger.error('Get telecaller today attendance error:', error);
+      next(error);
+    }
+  }
 }
 
 export default new TelecallingController();

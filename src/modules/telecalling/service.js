@@ -5,6 +5,7 @@ import CallLog from '../../models/CallLog.js';
 import TelecallerTask from '../../models/TelecallerTask.js';
 import FollowUp from '../../models/FollowUp.js';
 import User from '../../models/User.js';
+import TelecallerSession from '../../models/TelecallerSession.js';
 import logger from '../../utils/logger.js';
 
 class TelecallingService {
@@ -832,6 +833,132 @@ class TelecallingService {
     } catch (error) {
       logger.error('Get daily report error:', error);
       return { success: false, message: 'Failed to get daily report' };
+    }
+  }
+
+  // ==================== ATTENDANCE METHODS ====================
+
+  /**
+   * Telecaller check-in
+   */
+  async telecallerCheckIn(organizationId, userId, data) {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Check if already checked in today
+      let session = await TelecallerSession.findOne({
+        organizationId,
+        userId,
+        date: today
+      });
+
+      if (session && session.checkIn && session.checkIn.time) {
+        return { success: false, message: 'Already checked in for today' };
+      }
+
+      // Create or update session
+      if (!session) {
+        session = new TelecallerSession({
+          organizationId,
+          userId,
+          date: today,
+          status: 'active'
+        });
+      }
+
+      session.checkIn = {
+        time: new Date(),
+        location: data.location,
+        ip: data.ip
+      };
+      session.status = 'active';
+
+      await session.save();
+
+      // Populate user info
+      await session.populate('userId', 'profile.firstName profile.lastName email role');
+
+      return {
+        success: true,
+        attendance: session
+      };
+    } catch (error) {
+      logger.error('Telecaller check-in error:', error);
+      return { success: false, message: 'Failed to check in' };
+    }
+  }
+
+  /**
+   * Telecaller check-out
+   */
+  async telecallerCheckOut(organizationId, userId, data) {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Find today's session
+      const session = await TelecallerSession.findOne({
+        organizationId,
+        userId,
+        date: today
+      });
+
+      if (!session || !session.checkIn || !session.checkIn.time) {
+        return { success: false, message: 'No check-in record found for today' };
+      }
+
+      if (session.checkOut && session.checkOut.time) {
+        return { success: false, message: 'Already checked out for today' };
+      }
+
+      // Set check-out
+      session.checkOut = {
+        time: new Date(),
+        location: data.location,
+        ip: data.ip
+      };
+      session.status = 'completed';
+
+      // Calculate working hours
+      session.calculateWorkingHours();
+
+      await session.save();
+
+      // Populate user info
+      await session.populate('userId', 'profile.firstName profile.lastName email role');
+
+      return {
+        success: true,
+        attendance: session
+      };
+    } catch (error) {
+      logger.error('Telecaller check-out error:', error);
+      return { success: false, message: 'Failed to check out' };
+    }
+  }
+
+  /**
+   * Get today's attendance for telecaller
+   */
+  async getTelecallerTodayAttendance(organizationId, userId) {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const session = await TelecallerSession.findOne({
+        organizationId,
+        userId,
+        date: today
+      }).populate('userId', 'profile.firstName profile.lastName email role');
+
+      return {
+        success: true,
+        attendance: session || null
+      };
+    } catch (error) {
+      logger.error('Get telecaller today attendance error:', error);
+      return { success: false, message: 'Failed to get attendance' };
     }
   }
 }
