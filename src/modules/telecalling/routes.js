@@ -249,6 +249,10 @@ router.post('/leads/:id/dispose',
     body('status')
       .isIn(['connected', 'not_connected', 'busy', 'callback', 'not_interested', 'wrong_number', 'voicemail'])
       .withMessage('Invalid disposition status'),
+    body('newStatus')
+      .optional()
+      .isIn(['new', 'open', 'in_progress', 'follow_up', 'cold', 'warm', 'hot', 'converted', 'closed', 'lost', 'not_connected'])
+      .withMessage('Invalid lead status'),
     body('reason')
       .optional()
       .trim(),
