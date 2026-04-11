@@ -15,7 +15,8 @@
     "seed-sales": "node seed-sales.js",
     "seed-leads": "node seed-leads.js",
     "seed-interior": "node seed-interior-designer.js",
-    "seed-production": "node seed-production.js"
+    "seed-production": "node seed-production.js",
+    "seed-unified": "node seed-unified.js"
   },
   "keywords": [
     "hrms",
