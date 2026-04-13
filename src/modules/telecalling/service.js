@@ -844,7 +844,7 @@ class TelecallingService {
       // Add login activity
       if (attendanceSession?.checkIn?.time) {
         activities.push({
-          time: new Date(attendanceSession.checkIn.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          time: new Date(attendanceSession.checkIn.time).toISOString(),
           action: 'Login',
           description: 'Started work',
           type: 'login'
@@ -855,9 +855,8 @@ class TelecallingService {
       if (callTimeline && callTimeline.length > 0) {
         const recentCalls = callTimeline.slice(-5); // Last 5 calls
         recentCalls.forEach(call => {
-          const callTime = new Date(call.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
           activities.push({
-            time: callTime,
+            time: new Date(call.createdAt).toISOString(),
             action: call.status === 'connected' ? 'Call Connected' : 'Call Made',
             description: call.leadId?.name || call.phoneNumber,
             type: call.status === 'connected' ? 'resume' : 'break'
@@ -868,26 +867,23 @@ class TelecallingService {
       // Add logout activity
       if (attendanceSession?.checkOut?.time) {
         activities.push({
-          time: new Date(attendanceSession.checkOut.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          time: new Date(attendanceSession.checkOut.time).toISOString(),
           action: 'Logout',
           description: 'Ended work',
           type: 'logout'
         });
       }
 
-      // Sort activities by time
-      activities.sort((a, b) => {
-        const timeA = a.time.split(':').map(Number);
-        const timeB = b.time.split(':').map(Number);
-        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-      });
+      // Sort activities by time (ISO strings sort chronologically)
+      activities.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
       return {
         success: true,
         report: {
           date: reportDate,
-          loginTime: attendanceSession?.checkIn?.time ? new Date(attendanceSession.checkIn.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
-          logoutTime: attendanceSession?.checkOut?.time ? new Date(attendanceSession.checkOut.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
+          // Return raw ISO timestamps so client can format in local timezone
+          loginTime: attendanceSession?.checkIn?.time ? new Date(attendanceSession.checkIn.time).toISOString() : null,
+          logoutTime: attendanceSession?.checkOut?.time ? new Date(attendanceSession.checkOut.time).toISOString() : null,
           workingHours: attendanceSession?.workingHours || 0,
           totalBreaks: 0, // Not implemented yet
           calls: callStats.stats,
