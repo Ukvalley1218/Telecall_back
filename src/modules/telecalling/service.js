@@ -877,6 +877,37 @@ class TelecallingService {
       // Sort activities by time (ISO strings sort chronologically)
       activities.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
+      // Calculate working hours - dynamically if user is still checked in
+      let workingHours = 0;
+      logger.info('Calculating working hours for daily report:');
+      logger.info(`  Attendance session found: ${!!attendanceSession}`);
+      logger.info(`  Check-in time: ${attendanceSession?.checkIn?.time}`);
+      logger.info(`  Check-out time: ${attendanceSession?.checkOut?.time}`);
+      logger.info(`  Stored workingHours: ${attendanceSession?.workingHours}`);
+
+      if (attendanceSession?.checkIn?.time) {
+        if (attendanceSession.checkOut?.time) {
+          // User has checked out - use stored working hours or calculate
+          workingHours = attendanceSession.workingHours || 0;
+          if (workingHours === 0) {
+            // Calculate if not stored
+            const checkInTime = new Date(attendanceSession.checkIn.time);
+            const checkOutTime = new Date(attendanceSession.checkOut.time);
+            const diffMs = checkOutTime.getTime() - checkInTime.getTime();
+            workingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+            logger.info(`  Calculated working hours from check-out: ${workingHours}`);
+          }
+        } else {
+          // User is still checked in - calculate dynamically from now
+          const checkInTime = new Date(attendanceSession.checkIn.time);
+          const now = new Date();
+          const diffMs = now.getTime() - checkInTime.getTime();
+          workingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+          logger.info(`  Calculated working hours dynamically: ${workingHours}`);
+        }
+      }
+      logger.info(`  Final working hours: ${workingHours}`);
+
       return {
         success: true,
         report: {
@@ -884,7 +915,7 @@ class TelecallingService {
           // Return raw ISO timestamps so client can format in local timezone
           loginTime: attendanceSession?.checkIn?.time ? new Date(attendanceSession.checkIn.time).toISOString() : null,
           logoutTime: attendanceSession?.checkOut?.time ? new Date(attendanceSession.checkOut.time).toISOString() : null,
-          workingHours: attendanceSession?.workingHours || 0,
+          workingHours,
           totalBreaks: 0, // Not implemented yet
           calls: callStats.stats,
           timeline: callTimeline.timeline,
@@ -1015,9 +1046,36 @@ class TelecallingService {
         date: today
       }).populate('userId', 'profile.firstName profile.lastName email role');
 
+      if (!session) {
+        return {
+          success: true,
+          attendance: null
+        };
+      }
+
+      // Calculate working hours dynamically if user is still checked in
+      let calculatedWorkingHours = session.workingHours || 0;
+      if (session.checkIn?.time && !session.checkOut?.time) {
+        // User is still checked in - calculate dynamically from now
+        const checkInTime = new Date(session.checkIn.time);
+        const now = new Date();
+        const diffMs = now.getTime() - checkInTime.getTime();
+        calculatedWorkingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+      } else if (session.checkIn?.time && session.checkOut?.time && !session.workingHours) {
+        // User checked out but workingHours not stored - calculate
+        const checkInTime = new Date(session.checkIn.time);
+        const checkOutTime = new Date(session.checkOut.time);
+        const diffMs = checkOutTime.getTime() - checkInTime.getTime();
+        calculatedWorkingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+      }
+
+      // Return session with calculated working hours
+      const sessionObj = session.toObject();
+      sessionObj.workingHours = calculatedWorkingHours;
+
       return {
         success: true,
-        attendance: session || null
+        attendance: sessionObj
       };
     } catch (error) {
       logger.error('Get telecaller today attendance error:', error);
