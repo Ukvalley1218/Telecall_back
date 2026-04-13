@@ -369,6 +369,42 @@ class TelecallingService {
         return { success: false, message: 'Lead not found' };
       }
 
+      logger.info(`Disposing lead ${leadId} for user ${userId}`);
+      logger.info(`Disposition data: ${JSON.stringify(dispositionData)}`);
+
+      // Create call log first
+      const callLog = new CallLog({
+        organizationId,
+        userId,
+        leadId: lead._id,
+        campaignId: lead.campaignId,
+        phoneNumber: lead.phone,
+        callType: 'outgoing',
+        status: dispositionData.status === 'connected' ? 'connected' : 'not_connected',
+        duration: dispositionData.duration || 0,
+        disposition: dispositionData.status,
+        notes: dispositionData.remarks,
+        followUp: dispositionData.followUp ? {
+          scheduled: true,
+          date: dispositionData.followUp.date,
+          time: dispositionData.followUp.time,
+          notes: dispositionData.followUp.notes
+        } : undefined
+      });
+
+      await callLog.save();
+      logger.info(`Call log created: ${callLog._id}`);
+
+      // Add call to lead's call history
+      lead.callHistory.push({
+        callId: callLog._id,
+        phoneNumber: lead.phone,
+        duration: dispositionData.duration || 0,
+        status: dispositionData.status,
+        notes: dispositionData.remarks,
+        disposition: dispositionData.status
+      });
+
       // Update disposition
       lead.disposition = {
         status: dispositionData.status,
@@ -392,12 +428,24 @@ class TelecallingService {
         lead.stage = dispositionData.stage;
       }
 
+      // Update follow-up info
+      if (dispositionData.followUp) {
+        lead.nextFollowUp = {
+          date: dispositionData.followUp.date,
+          time: dispositionData.followUp.time,
+          notes: dispositionData.followUp.notes,
+          assignedTo: userId
+        };
+        lead.status = 'follow_up';
+      }
+
       lead.lastContactedAt = new Date();
       lead.lastContactedBy = userId;
 
       await lead.save();
+      logger.info(`Lead updated with call history`);
 
-      // Create follow-up if scheduled
+      // Create follow-up task if scheduled
       if (dispositionData.followUp) {
         await this.createFollowUp(organizationId, userId, {
           leadId: lead._id,
@@ -408,9 +456,10 @@ class TelecallingService {
           purpose: dispositionData.followUp.notes || 'Follow-up from call',
           notes: dispositionData.remarks
         });
+        logger.info(`Follow-up created for lead ${leadId}`);
       }
 
-      return { success: true, lead };
+      return { success: true, lead, callLog };
     } catch (error) {
       logger.error('Dispose lead error:', error);
       return { success: false, message: 'Failed to dispose lead' };

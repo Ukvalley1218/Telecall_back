@@ -263,6 +263,9 @@ router.post('/leads/:id/dispose',
       .optional()
       .isIn(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'converted', 'lost'])
       .withMessage('Invalid stage'),
+    body('duration')
+      .optional()
+      .isInt({ min: 0 }).withMessage('Duration must be a non-negative integer'),
     body('followUp.date')
       .optional()
       .isISO8601().withMessage('Invalid follow-up date'),
